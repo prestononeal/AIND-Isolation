@@ -317,36 +317,36 @@ class AlphaBetaPlayer(IsolationPlayer):
         otherwise return the minimum value over all legal child
         nodes.
         """
-        m = (-1, -1)
-        v = float("inf")
-        if self.terminal_test(game):
-            return m, v
+        ret_move = (-1, -1)
+        ret_score = float("inf")
         if not depth:
-            return m, self.score(game, self)
+            return game.get_player_location(self), self.score(game, self)
+        if self.terminal_test(game):
+            return ret_move, self.score(game, self)
         for m in game.get_legal_moves():
-            v = min(v, self.max_value(game.forecast_move(m), depth-1, alpha, beta)[1])
-            if v <= alpha:
+            ret_score = min(ret_score, self.max_value(game.forecast_move(m), depth-1, alpha, beta)[1])
+            if ret_score <= alpha:
                 break
-            beta = min(beta, v)
-        return m, v
+            beta = min(beta, ret_score)
+        return ret_move, ret_score
 
     def max_value(self, game, depth, alpha, beta):
         """ Return the value for a loss (-inf) if the game is over,
         otherwise return the maximum value over all legal child
         nodes.
         """
-        m = (-1, -1)
-        v = float("-inf")
-        if self.terminal_test(game):
-            return m, v
+        ret_move = (-1, -1)
+        ret_score = float("-inf")
         if not depth:
-            return m, self.score(game, self)
+            return game.get_player_location(self), self.score(game, self)
+        if self.terminal_test(game):
+            return ret_move, self.score(game, self)
         for m in game.get_legal_moves():
-            v = max(v, self.min_value(game.forecast_move(m), depth-1, alpha, beta)[1])
-            if v >= beta:
+            ret_score = max(ret_score, self.min_value(game.forecast_move(m), depth-1, alpha, beta)[1])
+            if ret_score >= beta:
                 break
-            alpha = max(alpha, v)
-        return m, v
+            alpha = max(alpha, ret_score)
+        return ret_move, ret_score
 
     def alphabeta(self, game, depth, alpha=float("-inf"), beta=float("inf")):
         """Implement depth-limited minimax search with alpha-beta pruning as
