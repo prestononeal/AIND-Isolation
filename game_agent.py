@@ -156,8 +156,11 @@ class MinimaxPlayer(IsolationPlayer):
         self.time_left = time_left
 
         # Initialize the best move so that this function returns something
-        # in case the search fails due to timeout
+        # in case the search fails due to timeout or there are no moves
         best_move = (-1, -1)
+
+        if self.terminal_test(game):  # player can't move
+            return best_move
 
         try:
             # The try/except block will automatically catch the exception
@@ -304,49 +307,51 @@ class AlphaBetaPlayer(IsolationPlayer):
         # Return the best move from the last completed search iteration
         return best_move
 
-    def terminal_test(self, game):
-        """ Return True if the game is over for the active player
-        and False otherwise.
-        """
-        if self.time_left() < self.TIMER_THRESHOLD:
-            raise SearchTimeout()
-        return not bool(game.get_legal_moves())
-
     def min_value(self, game, depth, alpha, beta):
         """ Return the value for a win (+inf) if the game is over,
         otherwise return the minimum value over all legal child
         nodes.
         """
-        ret_move = (-1, -1)
-        ret_score = float("inf")
+        if self.time_left() < self.TIMER_THRESHOLD:
+            raise SearchTimeout()
         if not depth:
-            return game.get_player_location(self), self.score(game, self)
-        if self.terminal_test(game):
-            return ret_move, self.score(game, self)
-        for m in game.get_legal_moves():
-            ret_score = min(ret_score, self.max_value(game.forecast_move(m), depth-1, alpha, beta)[1])
-            if ret_score <= alpha:
+            # Ran out of plies... return the heuristic score of this board
+            return self.score(game, self)
+
+        score = float("inf")
+        legal_moves = game.get_legal_moves()
+        if not legal_moves:  # player can't move
+            return score
+
+        for move in game.get_legal_moves():
+            score = min(score, self.max_value(game.forecast_move(move), depth-1, alpha, beta))
+            if score <= alpha:
                 break
-            beta = min(beta, ret_score)
-        return ret_move, ret_score
+            beta = min(beta, score)
+        return score
 
     def max_value(self, game, depth, alpha, beta):
         """ Return the value for a loss (-inf) if the game is over,
         otherwise return the maximum value over all legal child
         nodes.
         """
-        ret_move = (-1, -1)
-        ret_score = float("-inf")
+        if self.time_left() < self.TIMER_THRESHOLD:
+            raise SearchTimeout()
         if not depth:
-            return game.get_player_location(self), self.score(game, self)
-        if self.terminal_test(game):
-            return ret_move, self.score(game, self)
-        for m in game.get_legal_moves():
-            ret_score = max(ret_score, self.min_value(game.forecast_move(m), depth-1, alpha, beta)[1])
-            if ret_score >= beta:
+            # Ran out of plies... return the heuristic score of this board
+            return self.score(game, self)
+
+        score = float("-inf")
+        legal_moves = game.get_legal_moves()
+        if not legal_moves:  # player can't move
+            return score
+
+        for move in legal_moves:
+            score = max(score, self.min_value(game.forecast_move(move), depth-1, alpha, beta))
+            if score >= beta:
                 break
-            alpha = max(alpha, ret_score)
-        return ret_move, ret_score
+            alpha = max(alpha, score)
+        return score
 
     def alphabeta(self, game, depth, alpha=float("-inf"), beta=float("inf")):
         """Implement depth-limited minimax search with alpha-beta pruning as
@@ -393,4 +398,18 @@ class AlphaBetaPlayer(IsolationPlayer):
                 each helper function or else your agent will timeout during
                 testing.
         """
-        return self.max_value(game, depth, alpha, beta)[0]
+        best_score = float("-inf")
+        best_move = (-1, -1)
+        legal_moves = game.get_legal_moves()
+        if not legal_moves:  # player can't move
+            return best_move
+
+        for move in legal_moves:
+            score = self.min_value(game.forecast_move(move), depth-1, alpha, beta)
+            alpha = max(alpha, score)
+
+            if score > best_score:
+                best_score = score
+                best_move = move
+
+        return best_move
