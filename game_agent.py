@@ -152,7 +152,7 @@ class IsolationPlayer:
         self.search_depth = search_depth
         self.score = score_fn
         self.time_left = None
-        self.TIMER_THRESHOLD = timeout
+        self.TIMER_THRESHOLD = timeout - 0.1  # Add some padding so we don't timeout
 
     def time_check(self):
         """Raise an exception if we're out of time"""
