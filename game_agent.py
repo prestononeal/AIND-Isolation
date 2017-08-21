@@ -34,8 +34,23 @@ def custom_score(game, player):
     float
         The heuristic value of the current game state to the specified player.
     """
-    # For now, just return the number of available moves
-    return float(len(game.get_legal_moves(player)))
+    if game.is_loser(player):
+        return float("-inf")
+
+    if game.is_winner(player):
+        return float("inf")
+
+    # Calculate the number of moves we can make that can't be reflected by the opposing player
+    our_moves = game.get_legal_moves(player)
+    opp_moves = game.get_legal_moves(game.get_opponent(player))
+    no_reflect_moves = set()
+    for move in our_moves:
+        # Get the reflection of this current move
+        reflect_pt = (game.width - 1 - move[0], game.height - 1 - move[1])
+        if reflect_pt not in opp_moves:
+            no_reflect_moves.add(move)
+    # Over-weigh the number of moves that can't be reflected and compare against the number of opponent moves
+    return float(len(no_reflect_moves)**2 - len(opp_moves))
 
 
 def custom_score_2(game, player):
@@ -60,8 +75,22 @@ def custom_score_2(game, player):
     float
         The heuristic value of the current game state to the specified player.
     """
-    # For now, just return the number of available moves
-    return float(len(game.get_legal_moves(player)))
+    if game.is_loser(player):
+        return float("-inf")
+
+    if game.is_winner(player):
+        return float("inf")
+
+    # Rate the moves closest to the center as better
+    # The further you get from the center, the lower the score
+    our_moves = game.get_legal_moves(player)
+    score = 0.0
+    for move in our_moves:
+        width_distance = max(0.01, game.width // 2 - move[1])
+        height_distance = max(0.01, game.height // 2 - move[0])
+        score += 1/width_distance + 1/height_distance
+
+    return score
 
 
 def custom_score_3(game, player):
@@ -86,8 +115,15 @@ def custom_score_3(game, player):
     float
         The heuristic value of the current game state to the specified player.
     """
-    # For now, just return the number of available moves
-    return float(len(game.get_legal_moves(player)))
+    if game.is_loser(player):
+        return float("-inf")
+
+    if game.is_winner(player):
+        return float("inf")
+
+    # Play to limit the number of moves the opponent can make
+    opp_moves = game.get_legal_moves(game.get_opponent(player))
+    return float(100/max(0.0001, float(len(opp_moves))))
 
 
 class IsolationPlayer:
@@ -117,6 +153,11 @@ class IsolationPlayer:
         self.score = score_fn
         self.time_left = None
         self.TIMER_THRESHOLD = timeout
+
+    def time_check(self):
+        """Raise an exception if we're out of time"""
+        if self.time_left() < self.TIMER_THRESHOLD:
+            raise SearchTimeout()
 
 
 class MinimaxPlayer(IsolationPlayer):
@@ -165,7 +206,7 @@ class MinimaxPlayer(IsolationPlayer):
         try:
             # The try/except block will automatically catch the exception
             # raised when the timer is about to expire.
-            return self.minimax(game, self.search_depth)
+            best_move = self.minimax(game, self.search_depth)
 
         except SearchTimeout:
             pass  # Handle any actions required after timeout as needed
@@ -177,8 +218,7 @@ class MinimaxPlayer(IsolationPlayer):
         """ Return True if the game is over for the active player
         and False otherwise.
         """
-        if self.time_left() < self.TIMER_THRESHOLD:
-            raise SearchTimeout()
+        self.time_check()
         return not bool(game.get_legal_moves())
 
     def min_value(self, game, depth):
@@ -295,6 +335,12 @@ class AlphaBetaPlayer(IsolationPlayer):
         best_move = (-1, -1)
         search_depth = 1
 
+        # If this is the first one or two moves, attempt to take the center square (or something close to it)
+        if game.move_count == 0 or game.move_count == 1:
+            first_move = (game.width // 2, game.height // 2)
+            if first_move in game.get_legal_moves(game.active_player):
+                return first_move
+
         try:
             # The try/except block will automatically catch the exception
             # raised when the timer is about to expire.
@@ -312,8 +358,7 @@ class AlphaBetaPlayer(IsolationPlayer):
         otherwise return the minimum value over all legal child
         nodes.
         """
-        if self.time_left() < self.TIMER_THRESHOLD:
-            raise SearchTimeout()
+        self.time_check()
         if not depth:
             # Ran out of plies... return the heuristic score of this board
             return self.score(game, self)
@@ -335,8 +380,7 @@ class AlphaBetaPlayer(IsolationPlayer):
         otherwise return the maximum value over all legal child
         nodes.
         """
-        if self.time_left() < self.TIMER_THRESHOLD:
-            raise SearchTimeout()
+        self.time_check()
         if not depth:
             # Ran out of plies... return the heuristic score of this board
             return self.score(game, self)
@@ -398,6 +442,8 @@ class AlphaBetaPlayer(IsolationPlayer):
                 each helper function or else your agent will timeout during
                 testing.
         """
+        self.time_check()
+
         best_score = float("-inf")
         best_move = (-1, -1)
         legal_moves = game.get_legal_moves()

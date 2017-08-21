@@ -16,8 +16,8 @@ class IsolationAlphaBetaTest(unittest.TestCase):
 
     def setUp(self):
         reload(game_agent)
-        self.player1 = game_agent.AlphaBetaPlayer()
-        self.player2 = game_agent.AlphaBetaPlayer()
+        self.player1 = game_agent.AlphaBetaPlayer(score_fn=game_agent.custom_score_2)
+        self.player2 = game_agent.AlphaBetaPlayer(score_fn=game_agent.custom_score_2)
         self.game = isolation.Board(self.player1, self.player2, 9, 9)
         self.game._board_state = \
             [0, 0, 0, 0, 0, 0, 0, 0, 0,
